@@ -61,22 +61,24 @@ file_path = 'Data/ES/dev.in'
 test_set = read_unlabelled_dataset(file_path)
 #print(test_set)
 
-def predict_tags(listt, emission_params):
+def predict_tags(listt, emission_params, output_file_path):
     keys = emission_params.keys()
     max_vals={}
-    for word in listt:
-        max_val = 0
-        max_tag = ''
-        for x in keys:
-            if word in emission_params[x]:
-                if emission_params[x][word] > max_val:
-                    max_val = emission_params[x][word]
-                    max_tag = x
-            else:
-                if emission_params[x]["#UNK#"] > max_val:
-                    max_val = emission_params[x]["#UNK#"]
-                    max_tag = x
-        max_vals[word] = max_val
-        print(f"{word} {max_tag}")
+    with open(output_file_path, 'w') as output_file:
+        for word in listt:
+            max_val = 0
+            max_tag = ''
+            for x in keys:
+                if word in emission_params[x]:
+                    if emission_params[x][word] > max_val:
+                        max_val = emission_params[x][word]
+                        max_tag = x
+                else:
+                    if emission_params[x]["#UNK#"] > max_val:
+                        max_val = emission_params[x]["#UNK#"]
+                        max_tag = x
+            max_vals[word] = max_val
+            output_file.write(f"{word} {max_tag}\n")
 
-#predict_tags(test_set, emission_params)
+output_file_path = 'Data/ES/dev.p1.out'
+predict_tags(test_set, emission_params, output_file_path)
