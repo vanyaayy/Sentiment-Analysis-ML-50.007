@@ -32,6 +32,10 @@ def simple_sentiment_analysis(emission_parameters, dev_in_path, dev_out_path):
     with open(dev_out_path, 'w', encoding='utf-8') as file:
         file.write('\n'.join(output_lines))
 
-
+###ES####
 emission_params_ES = estimate_emission_parameters("Data/ES/train")
 simple_sentiment_analysis(emission_params_ES, "Data/ES/dev.in", "Data/ES/dev.p1.out")
+
+###RU####
+emission_params_RU = estimate_emission_parameters("Data/RU/train")
+simple_sentiment_analysis(emission_params_RU, "Data/RU/dev.in", "Data/RU/dev.p1.out")
