@@ -73,7 +73,6 @@ def k_viterbi(emission_parameters, transition_parameters, sentence, k):
         return sorted_paths[k-1][1]
     else:
         default = []
-        print("using default")
         for i in range (0,n) :
             default.append('O')
         return default
