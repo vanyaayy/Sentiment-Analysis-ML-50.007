@@ -3,13 +3,20 @@
 
 import torch
 import numpy as np
-from transformers import BertTokenizer, BertForSequenceClassification
-from torch.utils.data import DataLoader, TensorDataset
 
-# Load pre-trained BERT model and tokenizer
-model_name = 'bert-base-uncased'
-tokenizer = BertTokenizer.from_pretrained(model_name)
-model = BertForSequenceClassification.from_pretrained(model_name, num_labels=2)  # Assuming binary sentiment
+# Define a simple neural network class
+class SimpleNN(torch.nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(SimpleNN, self).__init__()
+        self.fc1 = torch.nn.Linear(input_size, hidden_size)
+        self.relu = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(hidden_size, output_size)
+        
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.relu(x)
+        x = self.fc2(x)
+        return x
 
 # Load and preprocess data
 def preprocess_data(data_path):
@@ -24,28 +31,53 @@ def preprocess_data(data_path):
 train_texts, train_labels = preprocess_data("train.txt")
 test_texts, test_labels = preprocess_data("test.txt")
 
-# Tokenize and create DataLoader
-train_encodings = tokenizer(train_texts, truncation=True, padding=True, return_tensors='pt')
-test_encodings = tokenizer(test_texts, truncation=True, padding=True, return_tensors='pt')
-train_dataset = TensorDataset(train_encodings['input_ids'], train_encodings['attention_mask'], torch.tensor(train_labels))
-test_dataset = TensorDataset(test_encodings['input_ids'], test_encodings['attention_mask'], torch.tensor(test_labels))
-train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=16)
+# Define a simple tokenizer (splitting text into individual words)
+def simple_tokenizer(text):
+    return text.split()
 
-# Training
+# Convert texts into feature vectors
+def convert_texts_to_feature_vectors(texts, tokenizer):
+    feature_vectors = []
+    for text in texts:
+        tokens = tokenizer(text)
+        # Convert tokens into a simple average word embedding
+        # You need to define how word embeddings are calculated
+        # For simplicity, let's assume an average of random numbers for now
+        avg_embedding = np.mean(np.random.rand(300))  # Assuming 300-dimensional word embeddings
+        feature_vectors.append(avg_embedding)
+    return feature_vectors
+
+train_features = convert_texts_to_feature_vectors(train_texts, simple_tokenizer)
+test_features = convert_texts_to_feature_vectors(test_texts, simple_tokenizer)
+
+# Convert to PyTorch tensors
+train_features = torch.tensor(train_features, dtype=torch.float32)
+train_labels = torch.tensor(train_labels, dtype=torch.int64)
+test_features = torch.tensor(test_features, dtype=torch.float32)
+
+# Create DataLoader
+train_dataset = torch.utils.data.TensorDataset(train_features, train_labels)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=True)
+
+# Initialize and train the simple neural network
+input_size = 300  # Assuming 300-dimensional word embeddings
+hidden_size = 128
+output_size = 2  # Binary classification
+model = SimpleNN(input_size, hidden_size, output_size)
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
-optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
+criterion = torch.nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
 for epoch in range(5):  # Adjust number of epochs
     model.train()
-    for batch in train_loader:
-        input_ids, attention_mask, labels = batch
-        input_ids, attention_mask, labels = input_ids.to(device), attention_mask.to(device), labels.to(device)
+    for batch_features, batch_labels in train_loader:
+        batch_features, batch_labels = batch_features.to(device), batch_labels.to(device)
         
         optimizer.zero_grad()
-        outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
-        loss = outputs.loss
+        outputs = model(batch_features)
+        loss = criterion(outputs, batch_labels)
         loss.backward()
         optimizer.step()
 
@@ -53,13 +85,11 @@ for epoch in range(5):  # Adjust number of epochs
 model.eval()
 all_preds = []
 with torch.no_grad():
-    for batch in test_loader:
-        input_ids, attention_mask, labels = batch
-        input_ids, attention_mask, labels = input_ids.to(device), attention_mask.to(device), labels.to(device)
-        outputs = model(input_ids, attention_mask=attention_mask)
-        logits = outputs.logits
-        preds = np.argmax(logits.cpu().numpy(), axis=1)
-        all_preds.extend(preds)
+    for batch_features in test_features.split(16):
+        batch_features = batch_features.to(device)
+        logits = model(batch_features)
+        preds = torch.argmax(logits, dim=1)
+        all_preds.extend(preds.cpu().numpy())
 
 # Evaluate accuracy
 accuracy = np.mean(np.array(all_preds) == np.array(test_labels))

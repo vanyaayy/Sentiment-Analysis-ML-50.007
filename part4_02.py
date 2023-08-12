@@ -1,6 +1,5 @@
 import numpy as np
 from collections import defaultdict
-from sklearn.metrics.pairwise import euclidean_distances
 
 class KNNClassifier:
     def __init__(self, k=3):
@@ -24,7 +23,7 @@ class KNNClassifier:
         input_feature = self.convert_token_to_feature_vector(token)
 
         # Calculate distances between input feature and all training features
-        distances = euclidean_distances([input_feature], self.features)[0]
+        distances = [self.euclidean_distance(input_feature, feature) for feature in self.features]
 
         # Find the k-nearest neighbors' indices
         k_nearest_indices = np.argsort(distances)[:self.k]
@@ -37,9 +36,11 @@ class KNNClassifier:
         return predicted_label
 
     def convert_token_to_feature_vector(self, token):
-        # This function should convert a token into a suitable feature vector
-        # You need to define how tokens are transformed into features
-        pass
+        feature_vector = [len(token)]  # Using token length as a single feature
+        return feature_vector
+
+    def euclidean_distance(self, a, b):
+        return np.sqrt(np.sum((a - b) ** 2))
 
 def simple_sentiment_analysis(classifier, dev_in_path, dev_out_path):
     output_lines = []

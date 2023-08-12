@@ -2,32 +2,34 @@
 
 
 import torch
-import torch.nn as nn
 import numpy as np
-from torch.utils.data import DataLoader, TensorDataset
-from collections import Counter
 
 # Define LSTM model
-class LSTMModel(nn.Module):
+class LSTMModel(torch.nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim):
         super(LSTMModel, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, bidirectional=True)
-        self.fc = nn.Linear(hidden_dim * 2, output_dim)
+        self.embedding = torch.nn.Embedding(vocab_size, embedding_dim)
+        self.lstm = torch.nn.LSTM(embedding_dim, hidden_dim, bidirectional=True)
+        self.fc = torch.nn.Linear(hidden_dim * 2, output_dim)
     
     def forward(self, text):
         embedded = self.embedding(text)
         output, (hidden, cell) = self.lstm(embedded)
         hidden_concat = torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1)
         return self.fc(hidden_concat)
-    
+
+# Build vocabulary
 def build_vocab(data_path):
-    vocab = Counter()
+    vocab = {}
+    word_idx = 0
     with open(data_path, 'r', encoding='utf-8') as file:
         for line in file:
             text, _ = line.strip().rsplit(' ', 1)
-            vocab.update(text.split())
-    return {word: idx for idx, (word, _) in enumerate(vocab.items())}
+            for word in text.split():
+                if word not in vocab:
+                    vocab[word] = word_idx
+                    word_idx += 1
+    return vocab
 
 vocab = build_vocab("train.txt")
 
@@ -37,45 +39,49 @@ def preprocess_data(data_path, vocab):
     with open(data_path, 'r', encoding='utf-8') as file:
         for line in file:
             text, label = line.strip().rsplit(' ', 1)
-            texts.append([vocab[word] for word in text.split()])
+            text_indices = [vocab[word] for word in text.split()]
+            texts.append(text_indices)
             labels.append(int(label))
     return texts, labels
 
 train_texts, train_labels = preprocess_data("train.txt", vocab)
 test_texts, test_labels = preprocess_data("test.txt", vocab)
 
-# Create DataLoader
-train_dataset = TensorDataset(torch.tensor(train_texts), torch.tensor(train_labels))
-test_dataset = TensorDataset(torch.tensor(test_texts), torch.tensor(test_labels))
-train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=16)
+# Define DataLoader
+train_features = torch.tensor(train_texts, dtype=torch.long)
+train_labels = torch.tensor(train_labels, dtype=torch.long)
+train_dataset = torch.utils.data.TensorDataset(train_features, train_labels)
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=True)
 
-# Training
+# Model training
 vocab_size = len(vocab)
 embedding_dim = 100
 hidden_dim = 128
 output_dim = 2  # Binary sentiment classification
 model = LSTMModel(vocab_size, embedding_dim, hidden_dim, output_dim)
-criterion = nn.CrossEntropyLoss()
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model.to(device)
+criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
 for epoch in range(5):  # Adjust number of epochs
     model.train()
-    for batch in train_loader:
-        inputs, labels = batch
+    for batch_features, batch_labels in train_loader:
+        batch_features, batch_labels = batch_features.to(device), batch_labels.to(device)
         optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
+        outputs = model(batch_features)
+        loss = criterion(outputs, batch_labels)
         loss.backward()
         optimizer.step()
 
-# Testing
+# Model testing
 model.eval()
 all_preds = []
 with torch.no_grad():
-    for batch in test_loader:
-        inputs, labels = batch
-        outputs = model(inputs)
+    for batch_features in test_texts:
+        batch_features = torch.tensor(batch_features, dtype=torch.long).unsqueeze(0).to(device)
+        outputs = model(batch_features)
         preds = np.argmax(outputs.cpu().numpy(), axis=1)
         all_preds.extend(preds)
 
