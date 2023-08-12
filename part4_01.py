@@ -42,8 +42,8 @@ def simple_sentiment_analysis(classifier, dev_in_path, dev_out_path):
 # Create and train classifiers for different languages
 emission_params_ES = NaiveBayesClassifier()
 emission_params_ES.train("Data/ES/train")
-simple_sentiment_analysis(emission_params_ES, "Data/ES/dev.in", "Data/ES/dev.p1.out")
+simple_sentiment_analysis(emission_params_ES, "Data/ES/dev.in", "Data/ES/train.in")
 
 emission_params_RU = NaiveBayesClassifier()
 emission_params_RU.train("Data/RU/train")
-simple_sentiment_analysis(emission_params_RU, "Data/RU/dev.in", "Data/RU/dev.p1.out")
+simple_sentiment_analysis(emission_params_RU, "Data/RU/dev.in", "Data/RU/train.in")
