@@ -66,7 +66,7 @@ nb_classifier.fit(X_train, y_train)
 
 # Load and preprocess the development data
 dev_tweets = []
-with open("Data/RU/dev.in", "r", encoding="utf-8") as dev_file:
+with open("Data/RU/dev.p4.out", "r", encoding="utf-8") as dev_file:
     for line in dev_file:
         processed_tweet = preprocess_text(line.strip())
         dev_tweets.append(processed_tweet)
