@@ -37,7 +37,6 @@ def text_to_bow(text):
     return bow_vector
 X_train = np.array([text_to_bow(tweet) for tweet, _ in train_data])
 
-# Naive Bayes Classifier definition and training
 class NaiveBayesClassifier:
      def __init__(self, num_classes):
         self.num_classes = num_classes
