@@ -1,4 +1,6 @@
 # Sentiment Analysis ML-50.007 Project
+Description:
+Our goal is to build a sequence labelling system for training data and use it to predict tag sequences for new sentences.
 
 Part 1: \
 Simply run the part1_code.py file \
